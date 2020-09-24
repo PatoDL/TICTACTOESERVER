@@ -29,9 +29,9 @@ void AllowInput()
 	fflush(stdin);
 	cin.ignore();
 
-	cin.getline((char*)sent.msg, 255);
-
+	cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20')" << endl;
 	
+	cin.getline((char*)sent.msg, 255);
 }
 
 int main()
@@ -82,47 +82,7 @@ int main()
 			memset(&sent, 0, sizeof(sent));
 			memset(&received, 0, sizeof(received));
 			
-			if(registered)
-			{
-				cout << "Escribe el tipo de dato (1- mensaje privado / s- mostrar estado actual de partida / g- eleccion en el juego / 0- recibir data del servidor) a enviar: ";
-				cin >> sent.cmd;
-				fflush(stdin);
-				cin.ignore();
-
-				if (sent.cmd != '0')
-				{
-					if (sent.cmd == 'g')
-						cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20'" << endl;
-
-					cout << "Escribe el mensaje a mandar: ";
-
-					cin.getline((char*)sent.msg, 255);
-
-					sendto(out, (char*)&sent, sizeof(message), 0, (sockaddr*)&server, sizeof(server));
-				}
-				else
-				{
-					
-					int bytesIn = recvfrom(out, (char*)&received, sizeof(message), 0, (sockaddr*)&server, &serverSize);
-
-					if (bytesIn == SOCKET_ERROR)
-					{
-						cerr << "error al recibir data." << endl;
-						return -1;
-					}
-				}
-			}
-			else
-			{
-				memset(&received, 0, sizeof(received));
-				int bytesIn = recvfrom(out, (char*)&received, sizeof(message), 0, (sockaddr*)&server, &serverSize);
-
-				if (bytesIn == SOCKET_ERROR)
-				{
-					cerr << "error al recibir data." << endl;
-					return -1;
-				}
-			}
+			int bytesIn = recvfrom(out, (char*)&received, sizeof(message), 0, (sockaddr*)&server, &serverSize);
 
 			if (received.cmd == 'r')
 			{
@@ -160,10 +120,18 @@ int main()
 							}
 						}
 						DrawGame(g);
+
+						cout << "it's your turn! make your move" << endl;
+						
 						AllowInput();
 						sendto(out, (char*)&sent, sizeof(message), 0, (sockaddr*)&server, sizeof(server));
+						cout << "waiting for the other player to make its move..." << endl;
 					}
 					break;
+				case 'o':
+					{
+						cout << received.msg << endl;
+					}
 				case 'e':
 					{
 						cout << "an error has occurred: " << received.msg << endl;

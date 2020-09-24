@@ -203,7 +203,7 @@ int main()
 			return -1;
 		}
 
-		cout << "Recibiendo datos de tipo: " << received.cmd << endl;
+		cout << "Receiving data of type: " << received.cmd << endl;
 		
 		switch (received.cmd)
 		{
@@ -220,16 +220,44 @@ int main()
 				g->p[player]->port = client.sin_port;
 				g->p[player]->client = client;
 
-				cout << "jugador " << player << " agregado al game " << game << endl;
+				cout << "player " << player << " added to game " << game << endl;
 
 				if(player == 1)
 				{
 					g->p[0]->enemy = g->p[player];
 					g->p[player]->enemy = g->p[0];
+
+					message m;
+					m.cmd = 'o';
+
+					string s;
+					char* aux = new char[255];
+
+					s = "it's your opponent's turn, please wait...";
+
+					strcpy_s(aux, 255, s.c_str());
+					strcpy_s(m.msg, aux);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(g->p[player]->client), sizeof(g->p[player]->client));
+
+					m.cmd = 1;
+					
+					s = "an opponent was found! it's your turn!";
+
+					strcpy_s(aux, 255, s.c_str());
+					strcpy_s(m.msg, aux);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(g->p[0]->client), sizeof(g->p[0]->client));
+
+					m.cmd = 'g';
+
+					s = ArrayToString(g->gs.state);
+					strcpy_s(aux, 255, s.c_str());
+					strcpy_s(m.msg, aux);
+
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(g->p[0]->client), sizeof(g->p[0]->client));
 				}
 				
 				sent.cmd = 'r';
-				string s = "Ingrese un alias con el que será identificado en el servidor: ";
+				string s = "Choose an alias with which you will be recognized in game: ";
 				strcpy_s(sent.msg, sizeof(sent.msg), s.c_str());
 				sendto(listening, (char*)&sent, sizeof(message), 0, (sockaddr*)&(client), sizeof(client));
 			}
@@ -259,18 +287,9 @@ int main()
 				{
 					p->alias = received.msg;
 					cout << "Player "<< p->num <<" from game "<< p->gameItBelongsTo <<" registered with name: " << p->alias.c_str() << endl;
+
+					
 				}
-				/*for (int i = 0; i < games.size(); i++)
-				{
-					for (int j = 0; j < 2; j++)
-					{
-						if (client.sin_port == games[i].p[j].port)
-						{
-							games[i].p[j].alias = received.msg;
-							cout << games[i].p[j].alias.c_str() << endl;
-						}
-					}
-				}*/
 			}
 			break;
 		case 1:
@@ -336,7 +355,7 @@ int main()
 				else
 				{
 					m.cmd = 'e';
-					s = "no se puede jugar porque aun no hay contrincante, espere a que otro jugador aparezca";
+					s = "cant't make a move because you don't have an opponent yet, please wait";
 					toSend = p;
 				}
 				strcpy_s(aux, 255, s.c_str());
