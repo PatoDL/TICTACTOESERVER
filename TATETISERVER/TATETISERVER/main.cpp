@@ -42,20 +42,27 @@ public:
 char CheckAll(GameState n)
 {
 	for (int i = 0; i < 3; i++)
-		if (n.state[i][0] == n.state[i][1] && n.state[i][0] == n.state[i][2])
+	{
+		if (n.state[i][0] == n.state[i][1] && n.state[i][0] == n.state[i][2] && n.state[i][0] != '0')
+		{
 			return n.state[i][0];
+		}
+	}	
 
 	for (int i = 0; i < 3; i++)
-		if (n.state[0][i] == n.state[1][i] && n.state[0][i] == n.state[2][i])
+	{
+		if (n.state[0][i] == n.state[1][i] && n.state[0][i] == n.state[2][i] && n.state[0][i] != '0')
+		{
 			return n.state[0][i];
-
+		}
+	}
 	//checking the win for both diagonal
 
-	if (n.state[0][0] == n.state[1][1] && n.state[0][0] == n.state[2][2])
+	if (n.state[0][0] == n.state[1][1] && n.state[0][0] == n.state[2][2] && n.state[0][0] != '0')
 	{
 		return n.state[0][0];
 	}
-	else if (n.state[0][2] == n.state[1][1] && n.state[0][2] == n.state[2][0])
+	else if (n.state[0][2] == n.state[1][1] && n.state[0][2] == n.state[2][0] && n.state[0][2] != '0')
 	{
 		return n.state[0][2];
 	}
@@ -288,11 +295,20 @@ int main()
 
 					if (p->enemy != nullptr)
 					{
-						s = "it's your turn!";
+						s = "You are Playing Against ";
 
-						StringToCharPtr(s, m.msg);
+						char c[255] = "You are Playing Against ";
+						
+						string s2 = ", it's your turn!";
 
 						Player* auxPlayer = games[p->gameItBelongsTo]->p[0];
+						
+						strcat_s(c, 255, auxPlayer->enemy->alias.c_str());
+
+						strcat_s(c, 255, s2.c_str());
+						
+						StringToCharPtr(c, m.msg);
+			
 						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
 
 						m.cmd = 'g';
@@ -306,11 +322,26 @@ int main()
 						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
 
 						m.cmd = 1;
-						s = "it's your opponent's turn!, please wait...";
+
+						char c2[255] = "You are Playing Against ";
+						
+						s2 = ", it's your opponent's turn!, please wait...";
+
+						strcat_s(c2, 255, auxPlayer->alias.c_str());
+
+						strcat_s(c2, 255, s2.c_str());
+						
+						StringToCharPtr(c2, m.msg);
+
+						auxPlayer = auxPlayer->enemy;
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
+
+						m.cmd = 't';
+
+						s = ArrayToString(games[auxPlayer->gameItBelongsTo]->gs.state);
 
 						StringToCharPtr(s, m.msg);
 
-						auxPlayer = auxPlayer->enemy;
 						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
 					}
 					else
@@ -417,6 +448,9 @@ int main()
 				{
 					StringToCharPtr(s, m.msg);
 					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(toSend->client));
+
+					m.cmd = 't';
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
 				}
 			}
 			

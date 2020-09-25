@@ -33,7 +33,7 @@ void AllowInput()
 {
 	//cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
 	//cin >> sent.cmd;
-	//fflush(stdin);
+	fflush(stdin);
 	//cin.ignore();
 	//while (sent.cmd != 'g')
 	//{
