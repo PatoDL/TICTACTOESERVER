@@ -354,56 +354,79 @@ int main()
 				}
 			}
 			break;
-		case 'n':
+		case 'd':
 			{
-				bool found = false;
-				Player* p = SearchPlayer(client.sin_port, found);
-				message m;
-				m.cmd = '1';
-				string s = "your opponent has chosen to not play again, wait for another player";
-				StringToCharPtr(s, m.msg);
-				sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
-				RestartGame(games[p->gameItBelongsTo]);
-				p->wantsToRestart = 0;
-				games[p->gameItBelongsTo]->p[p->num] = nullptr;
-				p->enemy->enemy = nullptr;
-				delete p;
-			}
-			break;
-		case 'y':
-			{
-				bool found = false;
-				Player* p = SearchPlayer(client.sin_port, found);
-				message m;
-				RestartGame(games[p->gameItBelongsTo]);
-				m.cmd = '1';
-				string s;
-				bool restarting = false;
-				p->wantsToRestart = 1;
-				if (p->enemy != nullptr)
+			if (received.msg[0] == 'y')
 				{
-					if (p->enemy->wantsToRestart == -1)
-						s = "waiting for your enemy";
-					else if (p->enemy->wantsToRestart == 1)
+					bool found = false;
+					Player* p = SearchPlayer(client.sin_port, found);
+					message m;
+					RestartGame(games[p->gameItBelongsTo]);
+					m.cmd = 1;
+					string s;
+					bool restarting = false;
+					p->wantsToRestart = 1;
+					if (p->enemy != nullptr)
 					{
-						s = "your enemy also wants to restart";
-						restarting = true;
+						if (p->enemy->wantsToRestart == -1)
+							s = "waiting for your enemy";
+						else if (p->enemy->wantsToRestart == 1)
+						{
+							s = "your enemy also wants to restart";
+							restarting = true;
+						}
+					}
+					else
+						s = "your enemy doesn't want to play again, searching for another game";
+
+					StringToCharPtr(s, m.msg);
+
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+
+					if (restarting)
+					{
+						m.cmd = 1;
+						char c[255] = "you are playing vs: ";
+						strcat_s(c, p->alias.c_str());
+						s = " again";
+						strcat_s(c, s.c_str());
+						StringToCharPtr(c, m.msg);
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+						m.cmd = 'g';
+						s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
+						StringToCharPtr(s, m.msg);
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+
+						m.cmd = 1;
+						char c2[255] = "you are playing vs: ";
+						strcat_s(c2, p->enemy->alias.c_str());
+						s = " again";
+						strcat_s(c2, s.c_str());
+						StringToCharPtr(c2, m.msg);
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->client, sizeof(p->client));
+						m.cmd = 't';
+						s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
+						StringToCharPtr(s, m.msg);
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->client, sizeof(p->client));
+
+						p->wantsToRestart = -1;
+						p->enemy->wantsToRestart = -1;
 					}
 				}
-				else
-					s = "your enemy doesn't want to play again, searching for another game";
-
-				StringToCharPtr(s, m.msg);
-				
-				sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
-
-				if (restarting)
+				else if(received.msg[0] == 'n')
 				{
-					m.cmd = 'g';
-					s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
+					bool found = false;
+					Player* p = SearchPlayer(client.sin_port, found);
+					message m;
+					m.cmd = '1';
+					string s = "your opponent has chosen to not play again, wait for another player";
 					StringToCharPtr(s, m.msg);
-					//sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->client, sizeof(p->client));
 					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+					RestartGame(games[p->gameItBelongsTo]);
+					p->wantsToRestart = 0;
+					games[p->gameItBelongsTo]->p[p->num] = nullptr;
+					p->enemy->enemy = nullptr;
+					delete p;
 				}
 			}
 			break;

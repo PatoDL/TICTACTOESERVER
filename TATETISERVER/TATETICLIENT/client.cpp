@@ -21,6 +21,8 @@ void DrawGame(char g[][3])
 
 message received;
 message sent;
+// enviar data a traves del socket
+string msgtest = "";
 
 void StringToCharPtr(string s, char c[])
 {
@@ -29,11 +31,11 @@ void StringToCharPtr(string s, char c[])
 	strcpy_s(c, 255, aux);
 }
 
-void AllowInput()
+void AllowInput(byte cmd)
 {
 	//cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
 	//cin >> sent.cmd;
-	fflush(stdin);
+	
 	//cin.ignore();
 	//while (sent.cmd != 'g')
 	//{
@@ -42,9 +44,24 @@ void AllowInput()
 	//	cin >> sent.cmd;
 	//	cin.ignore();
 	//}
-	sent.cmd = 'g';
-	if (sent.cmd == 'g')
-		cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20')" << endl;
+	memset(&sent, 0, sizeof(sent));
+	sent.cmd = cmd;
+	switch (sent.cmd)
+	{
+	case 'g':
+		{
+			cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20')" << endl;
+		}
+		break;
+	case 'd':
+		{
+			cout << "press 'y' to play again or 'n' to close the client" << endl;
+			if (sent.cmd == 'n')
+				msgtest = "close";
+		}
+		break;
+	}
+	fflush(stdin);
 	cin.getline((char*)sent.msg, 255);
 }
 
@@ -77,9 +94,7 @@ int main()
 		// crear socket, UDP
 		SOCKET out = socket(AF_INET, SOCK_DGRAM, 0);
 
-		// enviar data a traves del socket
-		string msgtest = "";
-		char xd[1024];
+		
 		int serverSize = sizeof(server);
 
 		message connectionMessage;
@@ -134,7 +149,7 @@ int main()
 
 						cout << "it's your turn! make your move" << endl;
 						
-						AllowInput();
+						AllowInput('g');
 						sendto(out, (char*)&sent, sizeof(message), 0, (sockaddr*)&server, sizeof(server));
 						cout << "waiting for the other player to make its move..." << endl;
 					}
@@ -142,13 +157,9 @@ int main()
 				case 's':
 					{
 						cout << received.msg << endl;
-						cout << "press 'y' to play again or 'n' to close the client" << endl;
-						cin >> sent.cmd;
-						if (sent.cmd == 'n')
-							msgtest = "close";
+						
 
-						string s = "";
-						StringToCharPtr(s, sent.msg);
+						AllowInput('d');
 						sendto(out, (char*)&sent, sizeof(message), 0, (sockaddr*)&server, sizeof(server));
 					}
 					break;
