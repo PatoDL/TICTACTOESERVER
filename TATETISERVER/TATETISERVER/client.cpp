@@ -31,21 +31,20 @@ void StringToCharPtr(string s, char c[])
 
 void AllowInput()
 {
-	cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
-	cin >> sent.cmd;
-	fflush(stdin);
-	cin.ignore();
-	while (sent.cmd != 'g')
-	{
-		cout << "that option doesn't exist, please choose another one:" << endl;
-		cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
-		cin >> sent.cmd;
-		cin.ignore();
-	}
-
-	if(sent.cmd== 'g')
+	//cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
+	//cin >> sent.cmd;
+	//fflush(stdin);
+	//cin.ignore();
+	//while (sent.cmd != 'g')
+	//{
+	//	cout << "that option doesn't exist, please choose another one:" << endl;
+	//	cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
+	//	cin >> sent.cmd;
+	//	cin.ignore();
+	//}
+	sent.cmd = 'g';
+	if (sent.cmd == 'g')
 		cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20')" << endl;
-	
 	cin.getline((char*)sent.msg, 255);
 }
 
