@@ -129,6 +129,39 @@ Game* SearchAvailableGame(int& game, int& player)
 	return g;
 }
 
+Game* SearchAvailableGame(int& game, int& player, int skipGame, bool shouldCreate)
+{
+	int counter = 0;
+	for (int i = 0; i < games.size(); i++, counter++)
+	{
+		if(i!=skipGame)
+		{
+			for (int j = 0; j < 2; j++)
+			{
+				if (games[i]->p[j] == nullptr)
+				{
+					game = i;
+					player = j;
+					return games[i];
+				}
+			}
+		}
+	}
+
+	Game* g = nullptr;
+	if(shouldCreate)
+	{
+		g = new Game();
+		game = counter;
+		player = 0;
+		games.push_back(g);
+	}
+	
+	
+
+	return g;
+}
+
 int Turn(Game* g, Player p, string position)
 {
 	int num = stoi(position);
@@ -210,14 +243,28 @@ void StringToCharPtr(string s, char c[])
 //Crear un listening socket (socket de escucha)
 SOCKET listening;
 
+void UpdatePlayersGame()
+{
+	for(int i=0;i<games.size();i++)
+	{
+		for(int j=0;j<2;j++)
+		{
+			games[i]->p[j]->gameItBelongsTo = i;
+			games[i]->p[j]->num = j;
+			games[i]->p[j]->wantsToRestart = -1;
+		}
+	}
+}
+
 void CheckLobby(Player* enemy)
 {
 	int game;
 	int player;
-	Game* g = SearchAvailableGame(game, player);
-	if (player == 0 || game == enemy->gameItBelongsTo)
+	Game* g = SearchAvailableGame(game, player, enemy->gameItBelongsTo, false);
+	
+	if (player == 0 || game == enemy->gameItBelongsTo || g == nullptr)
 		return;
-
+	
 	games[enemy->gameItBelongsTo]->p[enemy->num] = nullptr;
 	vector<Game*>::iterator iter = games.begin();
 	games.erase(iter + enemy->gameItBelongsTo);
@@ -233,6 +280,8 @@ void CheckLobby(Player* enemy)
 
 	RestartGame(g);
 
+	UpdatePlayersGame();
+	
 	message m;
 	m.cmd = 1;
 	string s;
