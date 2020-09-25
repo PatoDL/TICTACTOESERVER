@@ -435,8 +435,6 @@ int main()
 
 						s = ArrayToString(games[auxPlayer->gameItBelongsTo]->gs.state);
 
-						
-
 						StringToCharPtr(s, m.msg);
 						cout << m.msg << endl;
 						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
@@ -476,7 +474,7 @@ int main()
 			break;
 		case 'd':
 			{
-			if (received.msg[0] == 'y')
+				if (received.msg[0] == 'y')
 				{
 					bool found = false;
 					Player* p = SearchPlayer(client.sin_port, found);
@@ -495,8 +493,11 @@ int main()
 							s = "your enemy also wants to restart";
 							restarting = true;
 						}
-						
-					}		
+					}
+					else
+					{
+						CheckLobby(p);
+					}
 				
 					if (restarting)
 					{
@@ -541,7 +542,7 @@ int main()
 					
 					p->wantsToRestart = 0;
 
-					if(p->enemy != nullptr && p->enemy->wantsToRestart != -1)
+					if(p->enemy != nullptr)
 					{
 						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
 						
@@ -550,9 +551,10 @@ int main()
 						games[p->gameItBelongsTo]->p[1] = nullptr;
 						p->enemy->enemy = nullptr;
 						Player* aux = p->enemy;
+						if (p->enemy->wantsToRestart != -1)
+							CheckLobby(aux);
 						p->enemy = nullptr;
 						delete p;
-						CheckLobby(aux);
 					}
 					else if(p->enemy == nullptr)
 					{
