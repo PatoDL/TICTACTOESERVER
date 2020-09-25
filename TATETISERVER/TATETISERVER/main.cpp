@@ -22,12 +22,13 @@ public:
 	int num = -1;
 	Player* enemy;
 	sockaddr_in client;
+	int wantsToRestart = -1;
 };
 
 class GameState
 {
 public:
-	byte state[3][3] = { 0 };
+	char state[3][3] = { { '0','0','0' }, { '0','0','0' }, { '0','0','0' } };
 };
 
 class Game
@@ -38,11 +39,15 @@ public:
 	GameState gs;
 };
 
-int CheckAll(GameState n)
+char CheckAll(GameState n)
 {
 	for (int i = 0; i < 3; i++)
-		if (n.state[i][0] == n.state[i][1] && n.state[i][0] == n.state[i][2] || n.state[0][i] == n.state[1][i] && n.state[0][i] == n.state[2][i])
+		if (n.state[i][0] == n.state[i][1] && n.state[i][0] == n.state[i][2])
 			return n.state[i][0];
+
+	for (int i = 0; i < 3; i++)
+		if (n.state[0][i] == n.state[1][i] && n.state[0][i] == n.state[2][i])
+			return n.state[0][i];
 
 	//checking the win for both diagonal
 
@@ -55,7 +60,7 @@ int CheckAll(GameState n)
 		return n.state[0][2];
 	}
 
-	return 0;
+	return '0';
 }
 
 vector<Game*> games;
@@ -100,7 +105,7 @@ Game* SearchAvailableGame(int& game, int& player)
 	return g;
 }
 
-bool Turn(Game* g, Player p, string position)
+int Turn(Game* g, Player p, string position)
 {
 	int num = stoi(position);
 
@@ -109,29 +114,55 @@ bool Turn(Game* g, Player p, string position)
 
 	byte turn;
 	
-	if (p.num = 0)
+	if (p.num == 0)
 		turn = 'O';
 	else
 		turn = 'X';
 	
-	g->gs.state[row][col] = turn;
+	if(g->gs.state[row][col] == '0')
+		g->gs.state[row][col] = turn;
 
-	return true;
+	char status = CheckAll(g->gs);
+
+	if (status == 'X')
+		return 1;
+	else if (status == 'O')
+		return 0;
+
+	return -1;
 }
 
-string ArrayToString(byte g[][3])
+char* ArrayToString(char g[][3])
 {
-	string toReturn;/* = g[0][0] + g[0][1] + g[0][2] + g[1][0] + g[1][1] + g[1][2] + g[2][0] + g[2][1] + g[2][2];*/
+	char* toReturn = new char[9];/* = g[0][0] + g[0][1] + g[0][2] + g[1][0] + g[1][1] + g[1][2] + g[2][0] + g[2][1] + g[2][2];*/
 	
+	char* aux = toReturn;
+
 	for(int i=0;i<3;i++)
 	{
 		for(int j=0;j<3;j++)
 		{
-			toReturn += std::to_string(g[i][j]);
+			*toReturn = g[i][j];
+			toReturn++;
 		}
 	}
 
+	*toReturn = '\0';
+
+	toReturn = aux;
+
 	return toReturn;
+}
+
+void RestartGame(Game* g)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			g->gs.state[i][j] = '0';
+		}
+	}
 }
 
 void DrawGame(int g[][3])
@@ -139,6 +170,13 @@ void DrawGame(int g[][3])
 	cout << g[0][0] << g[0][1] << g[0][2] << endl;
 	cout << g[1][0] << g[1][1] << g[1][2] << endl;
 	cout << g[2][0] << g[2][1] << g[2][2] << endl;
+}
+
+void StringToCharPtr(string s, char c[])
+{
+	char* aux = new char[255];
+	strcpy_s(aux, 255, s.c_str());
+	strcpy_s(c,255, aux);
 }
 
 int main()
@@ -219,64 +257,19 @@ int main()
 				g->p[player]->num = player;
 				g->p[player]->port = client.sin_port;
 				g->p[player]->client = client;
-
+				g->p[player]->wantsToRestart = -1;
 				cout << "player " << player << " added to game " << game << endl;
 
 				if(player == 1)
 				{
 					g->p[0]->enemy = g->p[player];
 					g->p[player]->enemy = g->p[0];
-
-					message m;
-					m.cmd = 'o';
-
-					string s;
-					char* aux = new char[255];
-
-					s = "it's your opponent's turn, please wait...";
-
-					strcpy_s(aux, 255, s.c_str());
-					strcpy_s(m.msg, aux);
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(g->p[player]->client), sizeof(g->p[player]->client));
-
-					m.cmd = 1;
-					
-					s = "an opponent was found! it's your turn!";
-
-					strcpy_s(aux, 255, s.c_str());
-					strcpy_s(m.msg, aux);
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(g->p[0]->client), sizeof(g->p[0]->client));
-
-					m.cmd = 'g';
-
-					s = ArrayToString(g->gs.state);
-					strcpy_s(aux, 255, s.c_str());
-					strcpy_s(m.msg, aux);
-
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(g->p[0]->client), sizeof(g->p[0]->client));
 				}
 				
 				sent.cmd = 'r';
 				string s = "Choose an alias with which you will be recognized in game: ";
 				strcpy_s(sent.msg, sizeof(sent.msg), s.c_str());
 				sendto(listening, (char*)&sent, sizeof(message), 0, (sockaddr*)&(client), sizeof(client));
-			}
-			break;
-		case 's':
-			{
-				bool found = false;
-				Player* p = SearchPlayer(client.sin_port, found);
-				if(found)
-				{
-					message m;
-					m.cmd = 's';
-					char* aux = new char[255];
-					//DrawGame(games[p->gameItBelongsTo]->gs.state);
-					string s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
-					strcpy_s(aux, 255, s.c_str());
-					strcpy_s(m.msg, aux);
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
-				}
 			}
 			break;
 		case 'r':
@@ -288,47 +281,100 @@ int main()
 					p->alias = received.msg;
 					cout << "Player "<< p->num <<" from game "<< p->gameItBelongsTo <<" registered with name: " << p->alias.c_str() << endl;
 
-					
+					message m;
+					m.cmd = 1;
+					string s;
+					char* aux = new char[255];
+
+					if (p->enemy != nullptr)
+					{
+						s = "it's your turn!";
+
+						StringToCharPtr(s, m.msg);
+
+						Player* auxPlayer = games[p->gameItBelongsTo]->p[0];
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
+
+						m.cmd = 'g';
+
+						s = ArrayToString(games[auxPlayer->gameItBelongsTo]->gs.state);
+
+						
+
+						StringToCharPtr(s, m.msg);
+						cout << m.msg << endl;
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
+
+						m.cmd = 1;
+						s = "it's your opponent's turn!, please wait...";
+
+						StringToCharPtr(s, m.msg);
+
+						auxPlayer = auxPlayer->enemy;
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&auxPlayer->client, sizeof(auxPlayer->client));
+					}
+					else
+					{
+						m.cmd = 'o';
+						s = "You don't have an opponent yet, please wait!";
+						StringToCharPtr(s, m.msg);
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->client, sizeof(p->client));
+					}
 				}
 			}
 			break;
-		case 1:
-			/*{
-			bool sent = false;
-				for (int i = 0; i < games.size(); i++)
+		case 'n':
+			{
+				bool found = false;
+				Player* p = SearchPlayer(client.sin_port, found);
+				message m;
+				m.cmd = '1';
+				string s = "your opponent has chosen to not play again, wait for another player";
+				StringToCharPtr(s, m.msg);
+				sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+				RestartGame(games[p->gameItBelongsTo]);
+				p->wantsToRestart = 0;
+				games[p->gameItBelongsTo]->p[p->num] = nullptr;
+				p->enemy->enemy = nullptr;
+				delete p;
+			}
+			break;
+		case 'y':
+			{
+				bool found = false;
+				Player* p = SearchPlayer(client.sin_port, found);
+				message m;
+				RestartGame(games[p->gameItBelongsTo]);
+				m.cmd = '1';
+				string s;
+				bool restarting = false;
+				p->wantsToRestart = 1;
+				if (p->enemy != nullptr)
 				{
-					for (int j = 0; j < 2; j++)
+					if (p->enemy->wantsToRestart == -1)
+						s = "waiting for your enemy";
+					else if (p->enemy->wantsToRestart == 1)
 					{
-						if (client.sin_port == games[i].p[j].port)
-						{
-							message mes;
-							mes.cmd = 1;
-							
-
-							string start = "Message from: ";
-
-							char* aux = new char[255];
-							strcpy_s(aux, 255, start.c_str());
-							strcat_s(aux, 255, games[i].p[j]->alias.c_str());
-
-							strcat_s(aux, 255, " : ");
-
-							strcat_s(aux, 255, received.msg);
-
-							strcpy_s(mes.msg, aux);
-
-							if (games[i].p[j].enemy)
-							{
-								sendto(listening, (char*)&mes, sizeof(message), 0, (sockaddr*)&(games[i].p[j]->enemy->client), sizeof(games[i].p[j]->enemy->client));
-							}
-							sent = true;
-							break;
-						}
+						s = "your enemy also wants to restart";
+						restarting = true;
 					}
-					if (sent)
-						break;
 				}
-			}*/
+				else
+					s = "your enemy doesn't want to play again, searching for another game";
+
+				StringToCharPtr(s, m.msg);
+				
+				sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+
+				if (restarting)
+				{
+					m.cmd = 'g';
+					s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
+					StringToCharPtr(s, m.msg);
+					//sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->client, sizeof(p->client));
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+				}
+			}
 			break;
 		case 'g':
 			{
@@ -339,31 +385,39 @@ int main()
 				char* aux = new char[255];
 				string s;
 
-				Player* toSend;
-				
-				if (p->enemy != nullptr)
-				{
-					m.cmd = 'g';
-					Turn(games[p->gameItBelongsTo], *p, received.msg);
-					
-					s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
-					
-					cout << "g: " << m.msg<<endl;
+				Player* toSend = p->enemy;
 
-					toSend = p->enemy;
+				m.cmd = 'g';
+				
+				int winner = Turn(games[p->gameItBelongsTo], *p, received.msg);
+				
+				s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
+
+				
+
+				if (winner != -1)
+				{
+					m.cmd = 't';
+
+					StringToCharPtr(s, m.msg);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(toSend->client));
+
+					m.cmd = 's';
+					s = "You Won, do you want to play again?";
+					StringToCharPtr(s, m.msg);
+
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
+
+					s = "You Lose, do you want to play again?";
+					StringToCharPtr(s, m.msg);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(toSend->client));
 				}
 				else
 				{
-					m.cmd = 'e';
-					s = "cant't make a move because you don't have an opponent yet, please wait";
-					toSend = p;
+					StringToCharPtr(s, m.msg);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(toSend->client));
 				}
-				strcpy_s(aux, 255, s.c_str());
-				strcpy_s(m.msg, aux);
-
-				
-				
-				sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(p->enemy->client));
 			}
 			
 			break;

@@ -12,7 +12,7 @@ struct message
 	char msg[255];
 };
 
-void DrawGame(byte g[][3])
+void DrawGame(char g[][3])
 {
 	cout << g[0][0] << g[0][1] << g[0][2] << endl;
 	cout << g[1][0] << g[1][1] << g[1][2] << endl;
@@ -22,14 +22,29 @@ void DrawGame(byte g[][3])
 message received;
 message sent;
 
+void StringToCharPtr(string s, char c[])
+{
+	char* aux = new char[255];
+	strcpy_s(aux, 255, s.c_str());
+	strcpy_s(c, 255, aux);
+}
+
 void AllowInput()
 {
 	cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
 	cin >> sent.cmd;
 	fflush(stdin);
 	cin.ignore();
+	while (sent.cmd != 'g')
+	{
+		cout << "that option doesn't exist, please choose another one:" << endl;
+		cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
+		cin >> sent.cmd;
+		cin.ignore();
+	}
 
-	cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20')" << endl;
+	if(sent.cmd== 'g')
+		cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20')" << endl;
 	
 	cin.getline((char*)sent.msg, 255);
 }
@@ -101,23 +116,20 @@ int main()
 					{
 						cout << received.msg << endl;
 					}
-				case 2:
-					{
-						cout << received.msg << endl;
-					}
+					break;
 				case 'g':
 					{
-						if (received.cmd == 'g')
-							cout << "received game update:" << endl;
+						cout << "received game update:" << endl;
 						
-						byte g[3][3];
+						char g[3][3];
+						int counter = 0;
 						for (int i = 0; i < 3; i++)
 						{
 							for (int j = 0; j < 3; j++)
 							{
-								//int aux = received.msg[i + j] - '0';
-								g[i][j] = received.msg[i + j];
+								g[i][j] = received.msg[i + j + counter];
 							}
+							counter+=2;
 						}
 						DrawGame(g);
 
@@ -128,13 +140,42 @@ int main()
 						cout << "waiting for the other player to make its move..." << endl;
 					}
 					break;
+				case 's':
+					{
+						cout << received.msg << endl;
+						cout << "press 'y' to play again or 'n' to close the client" << endl;
+						cin >> sent.cmd;
+						if (sent.cmd == 'n')
+							msgtest = "close";
+
+						string s = "";
+						StringToCharPtr(s, sent.msg);
+						sendto(out, (char*)&sent, sizeof(message), 0, (sockaddr*)&server, sizeof(server));
+					}
+					break;
 				case 'o':
 					{
 						cout << received.msg << endl;
 					}
+					break;
 				case 'e':
 					{
 						cout << "an error has occurred: " << received.msg << endl;
+					}
+					break;
+				case 't':
+					{
+						char g[3][3];
+						int counter = 0;
+						for (int i = 0; i < 3; i++)
+						{
+							for (int j = 0; j < 3; j++)
+							{
+								g[i][j] = received.msg[i + j + counter];
+							}
+							counter += 2;
+						}
+						DrawGame(g);
 					}
 					break;
 				}
