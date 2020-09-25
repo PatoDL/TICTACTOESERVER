@@ -67,6 +67,19 @@ char CheckAll(GameState n)
 		return n.state[0][2];
 	}
 
+	bool foundAvailable = false;
+	for(int i=0;i<3;i++)
+	{
+		for(int j=0;j<3;j++)
+		{
+			if (n.state[i][j] == '0')
+				foundAvailable = true;
+		}
+	}
+
+	if (!foundAvailable)
+		return '-';
+	
 	return '0';
 }
 
@@ -130,8 +143,10 @@ int Turn(Game* g, Player p, string position)
 	else
 		turn = 'X';
 	
-	if(g->gs.state[row][col] == '0')
+	if (g->gs.state[row][col] == '0')
 		g->gs.state[row][col] = turn;
+	else
+		return -2;
 
 	char status = CheckAll(g->gs);
 
@@ -139,6 +154,8 @@ int Turn(Game* g, Player p, string position)
 		return 1;
 	else if (status == 'O')
 		return 0;
+	else if (status == '-')
+		return 2;
 
 	return -1;
 }
@@ -190,6 +207,48 @@ void StringToCharPtr(string s, char c[])
 	strcpy_s(c,255, aux);
 }
 
+//Crear un listening socket (socket de escucha)
+SOCKET listening;
+
+void CheckLobby(Player* enemy)
+{
+	int game;
+	int player;
+	Game* g = SearchAvailableGame(game, player);
+	if (player == 0)
+		return;
+	
+	g->p[player] = enemy;
+	g->p[player]->enemy = g->p[0];
+	g->p[0]->enemy = g->p[player];
+
+	RestartGame(g);
+
+	message m;
+	m.cmd = 1;
+	string s;
+
+	char c[255] = "Jugador encontrado: ";
+	strcat_s(c, enemy->alias.c_str());
+	StringToCharPtr(c, m.msg);
+	sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&g->p[0]->client, sizeof(g->p[0]->client));
+
+	char c2[255] = "Jugador encontrado: ";
+	strcat_s(c2, g->p[0]->alias.c_str());
+	s = ", it's your opponent's turn";
+	strcat_s(c2, s.c_str());
+	StringToCharPtr(c2, m.msg);
+	sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&enemy->client, sizeof(enemy->client));
+
+	m.cmd = 'g';
+	s = ArrayToString(g->gs.state);
+	StringToCharPtr(s, m.msg);
+	sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&g->p[0]->client, sizeof(g->p[0]->client));
+
+	m.cmd = 't';
+	sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&enemy->client, sizeof(enemy->client));
+}
+
 int main()
 {
 	//iniciar winsock
@@ -202,8 +261,7 @@ int main()
 		return -1;
 	}
 
-	//Crear un listening socket (socket de escucha)
-	SOCKET listening = socket(AF_INET, SOCK_DGRAM, 0);
+	listening = socket(AF_INET, SOCK_DGRAM, 0);
 
 	if (listening == INVALID_SOCKET)
 	{
@@ -422,11 +480,12 @@ int main()
 					bool found = false;
 					Player* p = SearchPlayer(client.sin_port, found);
 					message m;
-					m.cmd = '1';
+					m.cmd = 1;
 					string s = "your opponent has chosen to not play again, wait for another player";
 					StringToCharPtr(s, m.msg);
 					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
 					RestartGame(games[p->gameItBelongsTo]);
+					CheckLobby(p->enemy);
 					p->wantsToRestart = 0;
 					games[p->gameItBelongsTo]->p[p->num] = nullptr;
 					p->enemy->enemy = nullptr;
@@ -443,7 +502,7 @@ int main()
 				char* aux = new char[255];
 				string s;
 
-				Player* toSend = p->enemy;
+				Player* enemy = p->enemy;
 
 				m.cmd = 'g';
 				
@@ -453,13 +512,13 @@ int main()
 
 				
 
-				if (winner != -1)
+				if (winner != -1 && winner != 2 && winner != -2)
 				{
 					m.cmd = 't';
 
 					StringToCharPtr(s, m.msg);
 					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(toSend->client));
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(enemy->client), sizeof(enemy->client));
 
 					m.cmd = 's';
 					s = "You Won, do you want to play again?";
@@ -469,16 +528,43 @@ int main()
 
 					s = "You Lose, do you want to play again?";
 					StringToCharPtr(s, m.msg);
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(toSend->client));
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(enemy->client), sizeof(enemy->client));
+				}
+				else if(winner == 2)
+				{
+					m.cmd = 't';
+
+					StringToCharPtr(s, m.msg);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(enemy->client), sizeof(enemy->client));
+					
+					m.cmd = 's';
+					s = "it's been a tie! do you want to play again?";
+					StringToCharPtr(s, m.msg);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(enemy->client), sizeof(enemy->client));
+				}
+				else if(winner == -2)
+				{
+					m.cmd = 'e';
+					s = "error, the position you've chosen is invalid, try again";
+					StringToCharPtr(s, m.msg);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
+					m.cmd = 'g';
+					s = ArrayToString(games[p->gameItBelongsTo]->gs.state);
+					StringToCharPtr(s, m.msg);
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
 				}
 				else
 				{
 					StringToCharPtr(s, m.msg);
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(toSend->client), sizeof(toSend->client));
+					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(enemy->client), sizeof(enemy->client));
 
 					m.cmd = 't';
 					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&(p->client), sizeof(p->client));
 				}
+
+				
 			}
 			
 			break;
