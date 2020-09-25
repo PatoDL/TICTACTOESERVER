@@ -286,12 +286,12 @@ void CheckLobby(Player* enemy)
 	m.cmd = 1;
 	string s;
 
-	char c[255] = "Jugador encontrado: ";
+	char c[255] = "Player found: ";
 	strcat_s(c, enemy->alias.c_str());
 	StringToCharPtr(c, m.msg);
 	sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&g->p[0]->client, sizeof(g->p[0]->client));
 
-	char c2[255] = "Jugador encontrado: ";
+	char c2[255] = "Player found: ";
 	strcat_s(c2, g->p[0]->alias.c_str());
 	s = ", it's your opponent's turn";
 	strcat_s(c2, s.c_str());

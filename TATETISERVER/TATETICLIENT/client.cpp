@@ -39,7 +39,7 @@ void AllowInput(byte cmd)
 	{
 	case 'g':
 		{
-			cout << "escriba el numero de la fila seguido del de la columna, sin caracteres de por medio (ej: si desea seleccionar la fila 2, columna 0, debe ingresar '20')" << endl;
+			cout << "write the row number followed by the column one without any character in between (e.g.: if you want to choose row 2, column 0, you should write '20')" << endl;
 		}
 		break;
 	case 'd':
@@ -66,10 +66,10 @@ int main()
 		string ipToUse = "";
 		int portToUse = 0;
 
-		cout << "Escribe la ip a usar: ";
+		cout << "Write the desired IP: ";
 		cin >> ipToUse;
 		cout << endl;
-		cout << "Escribe el puerto a usar: ";
+		cout << "Write the port number: ";
 		cin >> portToUse;
 		cout << endl;
 		cin.ignore();
