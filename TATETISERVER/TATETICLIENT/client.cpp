@@ -33,17 +33,6 @@ void StringToCharPtr(string s, char c[])
 
 void AllowInput(byte cmd)
 {
-	//cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
-	//cin >> sent.cmd;
-	
-	//cin.ignore();
-	//while (sent.cmd != 'g')
-	//{
-	//	cout << "that option doesn't exist, please choose another one:" << endl;
-	//	cout << "Escribe el tipo de dato ( g- eleccion en el juego ) a enviar: ";
-	//	cin >> sent.cmd;
-	//	cin.ignore();
-	//}
 	memset(&sent, 0, sizeof(sent));
 	sent.cmd = cmd;
 	switch (sent.cmd)

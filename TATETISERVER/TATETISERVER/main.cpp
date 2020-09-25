@@ -78,10 +78,13 @@ Player* SearchPlayer(int port, bool &found)
 	{
 		for (int j = 0; j < 2; j++)
 		{
-			if (port == games[i]->p[j]->port)
+			if(games[i]->p[j] != nullptr)
 			{
-				found = true;
-				return games[i]->p[j];
+				if (port == games[i]->p[j]->port)
+				{
+					found = true;
+					return games[i]->p[j];
+				}
 			}
 		}
 	}
@@ -91,7 +94,8 @@ Player* SearchPlayer(int port, bool &found)
 
 Game* SearchAvailableGame(int& game, int& player)
 {
-	for(int i=0;i<games.size();i++)
+	int counter = 0;
+	for(int i=0;i<games.size();i++, counter++)
 	{
 		for(int j=0;j<2;j++)
 		{
@@ -105,7 +109,7 @@ Game* SearchAvailableGame(int& game, int& player)
 	}
 
 	Game* g = new Game();
-	game = 0;
+	game = counter;
 	player = 0;
 	games.push_back(g);
 
