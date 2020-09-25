@@ -215,12 +215,21 @@ void CheckLobby(Player* enemy)
 	int game;
 	int player;
 	Game* g = SearchAvailableGame(game, player);
-	if (player == 0)
+	if (player == 0 || game == enemy->gameItBelongsTo)
 		return;
+
+	games[enemy->gameItBelongsTo]->p[enemy->num] = nullptr;
+	vector<Game*>::iterator iter = games.begin();
+	games.erase(iter + enemy->gameItBelongsTo);
 	
 	g->p[player] = enemy;
 	g->p[player]->enemy = g->p[0];
 	g->p[0]->enemy = g->p[player];
+
+	for(int i = 0;i<2;i++)
+	{
+		g->p[i]->gameItBelongsTo = game;
+	}
 
 	RestartGame(g);
 
@@ -437,14 +446,9 @@ int main()
 							s = "your enemy also wants to restart";
 							restarting = true;
 						}
-					}
-					else
-						s = "your enemy doesn't want to play again, searching for another game";
-
-					StringToCharPtr(s, m.msg);
-
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
-
+						
+					}		
+				
 					if (restarting)
 					{
 						m.cmd = 1;
@@ -483,13 +487,29 @@ int main()
 					m.cmd = 1;
 					string s = "your opponent has chosen to not play again, wait for another player";
 					StringToCharPtr(s, m.msg);
-					sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+					
 					RestartGame(games[p->gameItBelongsTo]);
-					CheckLobby(p->enemy);
+					
 					p->wantsToRestart = 0;
-					games[p->gameItBelongsTo]->p[p->num] = nullptr;
-					p->enemy->enemy = nullptr;
-					delete p;
+
+					if(p->enemy != nullptr && p->enemy->wantsToRestart != -1)
+					{
+						sendto(listening, (char*)&m, sizeof(message), 0, (sockaddr*)&p->enemy->client, sizeof(p->enemy->client));
+						
+						p->enemy->num = 0;
+						games[p->gameItBelongsTo]->p[0] = p->enemy;
+						games[p->gameItBelongsTo]->p[1] = nullptr;
+						p->enemy->enemy = nullptr;
+						Player* aux = p->enemy;
+						p->enemy = nullptr;
+						delete p;
+						CheckLobby(aux);
+					}
+					else if(p->enemy == nullptr)
+					{
+						vector<Game*>::iterator iter = games.begin();
+						games.erase(iter+p->gameItBelongsTo);
+					}
 				}
 			}
 			break;
