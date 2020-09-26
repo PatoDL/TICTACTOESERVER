@@ -54,6 +54,13 @@ void AllowInput(byte cmd)
 	cin.getline((char*)sent.msg, 255);
 }
 
+/*mensaje de disculpa para el profe:
+ * el codigo es un asco, principalmente el del servidor, pero no me dio el tiempo para mejorarlo y hacer testing sin entregarlo fuera de fecha, no codeo tan mal como parece en esta solucion, lo juro
+ * hay bastante codigo repetido y algunos chequeos medio dudosos, pero las veces que lo probe funcionó bien.
+ * dicho esto, espero no le sea muy complicado entender como funciona,
+ * abrazo grande
+ */
+
 int main()
 {
 	// inicializar winsock
